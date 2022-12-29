@@ -115,3 +115,9 @@ To install the new ipxe files on an existing Triton USB, download the ipxe
 build either from Manta or updates.tritondatacenter.com. Extract the tar and
 copy the contents of the extracted boot directory to the boot directory on the
 USB, overwriting the existing files.
+
+# Omnios Notes
+
+Build with 
+
+gmake src/make bin-x86_64-efi/ipxe.efi
