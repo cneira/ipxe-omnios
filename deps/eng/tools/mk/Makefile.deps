@@ -1,0 +1,88 @@
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+#
+# Copyright 2019 Joyent, Inc.
+#
+
+#
+# Makefile.deps: Makefile for including common tools as dependencies
+#
+
+#
+# NOTE: This makefile comes from the "eng" repo. If you find yourself changing
+# this file, you should ensure that you test all consumers of it, since
+# eng.git is a git submodule of several repositories. After testing, push
+# changes to the eng.git repository as normal, then do the following for
+# each component that uses eng.git, likely reusing the original ticket subject
+# for the commit message as was used for the eng.git push.
+#
+#    $ git submodule update --remote deps/eng
+#    $ git add deps/eng
+#    $ git commit -m "TOOLS-xxxx some description" deps/eng
+#
+# Then create a PR as usual for review.
+#
+
+#
+# javascriptlint
+#
+JSL_EXEC	?= deps/javascriptlint/build/install/jsl
+JSL		?= $(JSL_EXEC)
+
+$(JSL_EXEC): | deps/javascriptlint/.git
+	cd deps/javascriptlint && make install
+
+distclean::
+	if [[ -f deps/javascriptlint/Makefile ]]; then \
+		cd deps/javascriptlint && make clean; \
+	fi
+
+#
+# jsstyle
+#
+JSSTYLE_EXEC	?= deps/jsstyle/jsstyle
+JSSTYLE		?= $(JSSTYLE_EXEC)
+
+$(JSSTYLE_EXEC): | deps/jsstyle/.git
+
+#
+# eslint
+#
+ESLINT_EXEC	?= node_modules/.bin/eslint
+ifdef NODE
+    ESLINT	:= $(NODE) $(ESLINT_EXEC)
+else
+    ESLINT	?= $(ESLINT_EXEC)
+endif
+
+# Install eslint.
+#
+# We assume all eslint-related deps are in "devDependencies" and install
+# only those. This can allow using `make check-eslint` (a) without taking the
+# time to install everything in "dependencies" and (b) even if "dependencies"
+# won't install/build on the current platform.
+#
+# NPM_EXEC will be defined if either of "Makefile.{node,node_prebuilt}.defs"
+# is included.
+ifdef NPM
+$(ESLINT_EXEC): package.json | $(NPM_EXEC)
+	$(NPM) install --no-save $(shell $(NODE) -e 'd = require("./package.json").devDependencies; console.log(Object.keys(d).map(function (k) { return k + "@" + d[k] }).join(" "))') && \
+	    touch $(ESLINT_EXEC)
+else
+$(ESLINT_EXEC): package.json
+	npm install --no-save $(shell node -e 'd = require("./package.json").devDependencies; console.log(Object.keys(d).map(function (k) { return k + "@" + d[k] }).join(" "))') && \
+	    touch $(ESLINT_EXEC)
+endif
+
+#
+# restdown
+#
+RESTDOWN_EXEC	?= deps/restdown/bin/restdown
+RESTDOWN	?= python $(RESTDOWN_EXEC)
+$(RESTDOWN_EXEC): | deps/restdown/.git
+
+EXTRA_DOC_DEPS	?=

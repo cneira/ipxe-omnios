@@ -1,0 +1,51 @@
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+#
+# Copyright 2020 Joyent, Inc.
+#
+
+#
+# NOTE: This makefile comes from the "eng" repo. If you find yourself changing
+# this file, you should ensure that you test all consumers of it, since
+# eng.git is a git submodule of several repositories. After testing, push
+# changes to the eng.git repository as normal, then do the following for
+# each component that uses eng.git, likely reusing the original ticket subject
+# for the commit message as was used for the eng.git push.
+#
+#    $ git submodule update --remote deps/eng
+#    $ git add deps/eng
+#    $ git commit -m "TOOLS-xxxx some description" deps/eng
+#
+# Then create a PR as usual for review.
+#
+
+#
+# See the rule for helloctf in the Makefile located at the root of this
+# repository for an example of how to use ctfconvert to include CTF information
+# in a desired binary.
+#
+# To use this file, be sure to also include Makefile.ctf.targ after defining
+# targets.
+#
+ifndef TOP
+$(error You must include Makefile.defs before this makefile.)
+endif
+
+ifndef CACHE_DIR
+$(error You must include Makefile.defs before this makefile.)
+endif
+
+CTFTOOLS := $(TOP)/$(CACHE_DIR)/ctftools
+CTFCONVERT := $(CTFTOOLS)/bin/i386/ctfconvert
+CTFDIFF := $(CTFTOOLS)/bin/i386/ctfdiff
+CTFDUMP := $(CTFTOOLS)/bin/i386/ctfdump
+CTFSTABS := $(CTFTOOLS)/bin/i386/ctfstabs
+CTFSTRIP := $(CTFTOOLS)/bin/i386/ctfstrip
+
+ifeq ($(shell uname -s),SunOS)
+STAMP_CTF_TOOLS :=	$(MAKE_STAMPS_DIR)/ctftools.stamp
+endif

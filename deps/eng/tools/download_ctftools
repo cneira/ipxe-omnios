@@ -1,0 +1,98 @@
+#!/bin/bash
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+#
+# Copyright 2020 Joyent, Inc.
+#
+
+#
+# This program will download a prebuilt copy of the CTF tools from Manta
+# corresponding to the min_platform. The tools are built and uploaded via a
+# Jenkins job.
+#
+
+MANTA_HOST="https://us-east.manta.joyent.com"
+MIN_PLATFORM="$1"
+MPATH="/Joyent_Dev/public/builds/SmartOS/ctftools/master/built.joyent_$MIN_PLATFORM"
+TARBALL="ctftools.tar.gz"
+
+if [[ $# -ne 2 ]]; then
+	printf "usage: download_ctftools min_platform destdir\n" 2>&1
+	exit 1
+fi
+
+TOP=$(cd "$(dirname "$0")/../../.." && pwd)
+CACHE_DIR=$2
+TMPDIR="$TOP/$CACHE_DIR"
+CTFDIR="$TOP/$CACHE_DIR/ctftools"
+
+if ! /usr/bin/mkdir -p "$TMPDIR"; then
+	printf "ERROR: could not mkdir \"%s\"\n" "$TMPDIR" >&2
+	exit 1
+fi
+
+if [[ ! -f "$TMPDIR/$TARBALL" ]]; then
+	#
+	# Try to download the tarball from Manta.
+	#
+
+	LATEST="$(/usr/bin/curl -sSf $MANTA_HOST/$MPATH/latest)"
+	if [[ -z "$LATEST" ]]; then
+		printf "ERROR: failed to read $MANTA_HOST/$MPATH/latest\n" >&2
+		exit 1
+	fi
+	URL="$MANTA_HOST/$LATEST/$TARBALL"
+
+	start_time=$SECONDS
+	rm -f "$TMPDIR/$TARBALL.tmp"
+	while :; do
+		if (( $SECONDS > start_time + 120 )); then
+			printf "ERROR: timed out trying to download tools\n" >&2
+			exit 1
+		fi
+
+		echo "Downloading $URL"
+
+		if ! /usr/bin/curl -f -o "$TMPDIR/$TARBALL.tmp" "$URL"; then
+			printf "WARNING: download failure (retrying)\n" >&2
+			sleep 5
+			continue
+		fi
+
+		if ! /usr/bin/gzip -t "$TMPDIR/$TARBALL.tmp"; then
+			printf "WARNING: download gzip invalid (retrying)\n" >&2
+			sleep 5
+			continue
+		fi
+
+		if ! /usr/bin/mv "$TMPDIR/$TARBALL.tmp" "$TMPDIR/$TARBALL"; then
+			printf "ERROR: could not move tarball into place\n" >&2
+			exit 1
+		fi
+
+		break
+	done
+fi
+
+#
+# Extract the tarball
+#
+if ! /usr/bin/mkdir -p "$CTFDIR"; then
+	printf "ERROR: could not mkdir \"%s\"\n" "$CTFDIR" >&2
+	exit 1
+fi
+
+if ! cd "$CTFDIR"; then
+	exit 1
+fi
+
+if ! /usr/bin/tar xfz "$TMPDIR/$TARBALL"; then
+	printf "ERROR: could not extract tarball\n" >&2
+	exit 1
+fi
+
+exit 0
