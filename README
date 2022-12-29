@@ -120,4 +120,4 @@ USB, overwriting the existing files.
 
 Build with 
 
-gmake src/make bin-x86_64-efi/ipxe.efi
+env NO_WERROR=1 gmake  bin-x86_64-efi/ipxe.efi
